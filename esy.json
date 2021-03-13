@@ -14,7 +14,10 @@
     "clean": "node ./scripts/ninja.js clean"
   },
   "esy": {
-    "build": "dune build -p bucklescript",
+    "build": [
+      "dune build jscomp/main/bsc.exe --release",
+      "dune build -p bucklescript"
+    ],
     "install": [
       ["esy-installer", "$cur__target_dir/default/bucklescript.install"],
       ["$cur__root/fix-install.sh"]
