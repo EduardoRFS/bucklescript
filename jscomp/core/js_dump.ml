@@ -75,10 +75,10 @@ module L = Js_dump_lit
 
 type cxt = {
   scope: Ext_pp_scope.t;
+  sourcemap: Js_sourcemap.t option;
   pp: Ext_pp.t;
 }
-let from_pp pp = { scope = Ext_pp_scope.empty; pp }
-let from_buffer buf = from_pp (Ext_pp.from_buffer buf)
+let make pp ?sourcemap scope = { scope; sourcemap; pp; }
 
 let update_scope cxt scope = { cxt with scope }
 let ident cxt id = 
@@ -105,6 +105,11 @@ let str_of_ident cxt id =
   (str, update_scope cxt scope)
 let force_newline cxt = Ext_pp.force_newline cxt.pp
 let flush cxt () = Ext_pp.flush cxt.pp ()
+
+let write_sourcemap cxt opt_loc =
+  match (opt_loc, cxt.sourcemap) with
+  | (Some loc, Some sourcemap) -> Js_sourcemap.write sourcemap loc
+  | _ -> ()
 
 module Curry_gen = struct
   let pp_curry_dot cxt =
@@ -568,6 +573,7 @@ and vident cxt (v : J.vident) =
 (* The higher the level, the more likely that inner has to add parens *)
 and expression ~level:l cxt (exp : J.expression) : cxt =
   pp_comment_option cxt exp.comment ;
+  write_sourcemap cxt exp.loc;
   expression_desc cxt ~level:l exp.expression_desc
 
 and expression_desc cxt ~(level:int) x : cxt  =
@@ -1025,6 +1031,7 @@ and variable_declaration top cxt
     | _ ->
       match e.expression_desc  with
       | Fun (is_method, params, b, env ) ->
+        write_sourcemap cxt e.loc;
         pp_function ~is_method cxt
           ~fn_state:(if top then Name_top name else Name_non_top name)
           params b env
@@ -1362,21 +1369,24 @@ and block cxt b =
 
 
 
+let make_debugging () = 
+  let buffer  = Buffer.create 50 in
+  let pp = Ext_pp.from_buffer buffer in
+  let scope = Ext_pp_scope.empty in
+  (buffer, make pp scope)
 
 let string_of_block  (block : J.block) =
-  let buffer  = Buffer.create 50 in
-  let cxt = from_buffer buffer in
+  let (buffer, cxt) = make_debugging () in
   let _ : cxt = statement_list true cxt block in
   flush cxt ();
   Buffer.contents buffer
 
-
-
 let string_of_expression (e : J.expression) =
-  let buffer  = Buffer.create 50 in
-  let cxt = from_buffer buffer in
+  let (buffer, cxt) = make_debugging () in
   let _ : cxt =  expression ~level:0 cxt e in
   flush cxt ();
   Buffer.contents buffer
 
-let statement_list top scope pp b = (statement_list top { scope; pp } b).scope
+let statement_list top pp ?sourcemap scope b =
+  let cxt = make pp ?sourcemap scope in
+  (statement_list top cxt b).scope

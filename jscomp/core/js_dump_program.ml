@@ -63,9 +63,9 @@ let extract_file_comments  (x : J.deps_program) =
 
 
 
-let program f cxt   ( x : J.program ) =
+let program ?sourcemap f cxt (x : J.program) =
   P.force_newline f;
-  let cxt =  Js_dump.statement_list true cxt f x.block  in
+  let cxt = Js_dump.statement_list true f ?sourcemap cxt x.block  in
   P.force_newline f;
   Js_dump_import_export.exports cxt f x.exports
 
@@ -75,7 +75,7 @@ let dump_program (x : J.program) oc =
 let [@inline] is_default (x : Js_op.kind) =
   match x with External {default} -> default | _ -> false
 
-let node_program ~output_dir f ( x : J.deps_program) =
+let node_program ?sourcemap ~output_dir f ( x : J.deps_program) =
   P.string f L.strict_directive;
   P.newline f ;
   let cxt =
@@ -93,12 +93,12 @@ let node_program ~output_dir f ( x : J.deps_program) =
             is_default x.kind
          ))
   in
-  program f cxt x.program
+  program ?sourcemap f cxt x.program
 
 
 
 
-let es6_program  ~output_dir fmt f (  x : J.deps_program) =
+let es6_program ?sourcemap ~output_dir fmt f (  x : J.deps_program) =
   let cxt =
     Js_dump_import_export.imports
       Ext_pp_scope.empty
@@ -112,7 +112,7 @@ let es6_program  ~output_dir fmt f (  x : J.deps_program) =
               ))
   in
   let () = P.force_newline f in
-  let cxt = Js_dump.statement_list true cxt f x.program.block in
+  let cxt = Js_dump.statement_list true f ?sourcemap cxt x.program.block in
   let () = P.force_newline f in
   Js_dump_import_export.es6_export cxt f x.program.exports
 
@@ -126,6 +126,7 @@ let es6_program  ~output_dir fmt f (  x : J.deps_program) =
 *)
 
 let pp_deps_program
+    ?sourcemap
     ~(output_prefix : string)
     (kind : Js_packages_info.module_system )
     (program  : J.deps_program) (f : Ext_pp.t) =
@@ -144,9 +145,9 @@ let pp_deps_program
     begin
       ignore (match kind with
           | Es6 | Es6_global ->
-            es6_program ~output_dir kind f program
+            es6_program ?sourcemap ~output_dir kind f program
           | NodeJS ->
-            node_program ~output_dir f program
+            node_program ?sourcemap ~output_dir f program
         ) ;
       P.newline f ;
       P.string f (
@@ -161,8 +162,9 @@ let pp_deps_program
 
 
 let dump_deps_program
+    ?sourcemap
     ~output_prefix
     kind
     x
     (oc : out_channel) =
-  pp_deps_program ~output_prefix  kind x (P.from_channel oc)
+  pp_deps_program ?sourcemap ~output_prefix  kind x (P.from_channel oc)

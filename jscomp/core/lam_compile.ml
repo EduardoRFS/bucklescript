@@ -1576,11 +1576,11 @@ and compile_prim (prim_info : Lam.prim_info) (lambda_cxt : Lam_compile_context.t
 and compile_lambda
     (lambda_cxt : Lam_compile_context.t)
     (cur_lam : Lam.t)  : Js_output.t  =
-
     match cur_lam with
-    | Lfunction{ params; body} ->
+    | Lfunction{ params; body; loc } ->
       Js_output.output_of_expression lambda_cxt.continuation  ~no_effects:no_effects_const
         (E.ocaml_fun
+           ~loc
            params
            (* Invariant:  jmp_table can not across function boundary,
               here we share env

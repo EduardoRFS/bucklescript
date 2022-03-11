@@ -27,8 +27,9 @@
 *)
 val statement_list : 
   bool ->
-  Ext_pp_scope.t -> 
   Ext_pp.t -> 
+  ?sourcemap:Js_sourcemap.t ->
+  Ext_pp_scope.t -> 
   J.block -> 
   Ext_pp_scope.t
 
